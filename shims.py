@@ -48,6 +48,8 @@ def unpack_virtualenv(path):
     dirs = set([base])
     while dirs:
         current = dirs.pop()
+        if not os.path.exists(current):
+            continue
         for name in os.listdir(current):
             name = os.path.join(current, name)
             existing.append(basename + name[len(base):])
@@ -57,7 +59,7 @@ def unpack_virtualenv(path):
     if os.path.exists(base):
         if sorted(existing) == sorted(names):
             return base
-    shutil.rmtree(base)
+        shutil.rmtree(base)
     tf.extractall()
     return base
 
