@@ -17,8 +17,8 @@ import tarfile
 import textwrap
 
 
-VIRTUALENV_URL = "https://files.pythonhosted.org/packages/b1/72/2d70c5a1de409ceb3a27ff2ec007ecdd5cc52239e7c74990e32af57affe9/virtualenv-15.2.0.tar.gz"
-VIRTUALENV_SHA256 = "1d7e241b431e7afce47e77f8843a276f652699d1fa4f93b9d8ce0076fd7b0b54"
+VIRTUALENV_URL = "https://files.pythonhosted.org/packages/aa/3b/213c384c65e17995cccd0f2bb993b7b82c41f62e74c2f8f39c8e60549d86/virtualenv-16.7.9.tar.gz"
+VIRTUALENV_SHA256 = "0d62c70883c0342d59c11d0ddac0d954d0431321a41ab20851facf2b222598f3"
 
 
 def download_virtualenv(url):
