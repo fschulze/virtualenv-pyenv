@@ -8,6 +8,7 @@ try:
 except ImportError:
     from urllib2 import urlopen
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -17,8 +18,38 @@ import tarfile
 import textwrap
 
 
-VIRTUALENV_URL = "https://files.pythonhosted.org/packages/aa/3b/213c384c65e17995cccd0f2bb993b7b82c41f62e74c2f8f39c8e60549d86/virtualenv-16.7.9.tar.gz"
-VIRTUALENV_SHA256 = "0d62c70883c0342d59c11d0ddac0d954d0431321a41ab20851facf2b222598f3"
+virtualenv_infos = {
+    '16.7.9': dict(
+        url=(
+            "https://files.pythonhosted.org/packages/aa/3b/"
+            "213c384c65e17995cccd0f2bb993b7b82c41f62e74c2f8f39c8e60549d86/"
+            "virtualenv-16.7.9.tar.gz"),
+        sha256=(
+            "0d62c70883c0342d59c11d0ddac0d954d0431321a41ab20851facf2b222598f3")
+    ),
+    '20.0.17': dict(
+        url=(
+            "https://files.pythonhosted.org/packages/1c/fc/"
+            "1bcbb524de8cef189166e7e42c31f411ace373ceacdd77d9a366d13976c6/"
+            "virtualenv-20.0.17.tar.gz"),
+        use_venv=True,
+        sha256=(
+            "c8364ec469084046c779c9a11ae6340094e8a0bf1d844330fc55c1cefe67c172")
+    )}
+
+
+NEWEST_VIRTUALENV = '20.0.17'
+
+
+python_virtualenv = {
+    (2, 7): '16.7.9',
+    (3, 4): '16.7.9',
+    (3, 5): '16.7.9',
+    (3, 6): '16.7.9',
+    (3, 7): '20.0.17',
+    (3, 8): '20.0.17',
+    (3, 9): '20.0.17',
+    (3, 10): '20.0.17'}
 
 
 def download_virtualenv(url):
@@ -57,7 +88,8 @@ def unpack_virtualenv(path):
                 dirs.add(name)
                 continue
     if os.path.exists(base):
-        if sorted(existing) == sorted(names):
+        extra = sorted(set(existing).difference(names))
+        if not extra:
             return base
         shutil.rmtree(base)
     tf.extractall()
@@ -81,22 +113,39 @@ def get_pythons(shims):
             shim[0])
         if not match:
             continue
+        python_version_script = textwrap.dedent("""\
+            import json
+            import sys
+            print(json.dumps(list(sys.version_info)))""")
+        python_version = tuple(json.loads(subprocess.check_output([
+            shim[1], '-c', python_version_script]))[:2])
+        virtualenv_version = python_virtualenv[python_version]
         virtualenv = "virtualenv-%s" % tuple(filter(None, match.groups()))
-        pythons.append((virtualenv, shim[1]))
-    return sorted(pythons)
+        pythons.append((python_version, virtualenv, virtualenv_version, shim[1]))
+    return [x[1:] for x in sorted(pythons)]
 
 
-def make_scripts(bin_path, virtualenv_py):
+def make_scripts(bin_path, venvs):
     shims = get_shims()
     template = textwrap.dedent("""\
         #!/bin/sh
         exec {python} {virtualenv_py} $*
     """)
-    for virtualenv, shim in get_pythons(shims):
+    for virtualenv, virtualenv_version, shim in get_pythons(shims):
         path = os.path.join(bin_path, virtualenv)
         if os.path.exists(path):
             os.unlink(path)
+        use_venv = virtualenv_infos[virtualenv_version].get('use_venv', False)
+        virtualenv_py = get_virtualenv_py(venvs, shim, virtualenv_version)
+        if use_venv:
+            print(
+                f"Linking {virtualenv} to {virtualenv_py!r} for {shim!r}.")
+            os.symlink(virtualenv_py, path)
+            continue
         with open(path, 'w') as f:
+            print(
+                f"Writing {virtualenv} for {shim!r} with "
+                f"virtualenv-{virtualenv_version}.")
             f.write(
                 template.format(
                     python=shim,
@@ -104,21 +153,47 @@ def make_scripts(bin_path, virtualenv_py):
         os.chmod(path, 0o755)
 
 
-def run():
-    path = download_virtualenv(VIRTUALENV_URL)
-    if not verify_virtualenv(path, VIRTUALENV_SHA256):
-        print("The sha256 sum doesn't match for %s" % path)
+def make_virtualenv_py(venvs, python, base):
+    virtualenv_py = os.path.join(base, 'virtualenv.py')
+    if os.path.exists(virtualenv_py):
+        return virtualenv_py
+    python_basename = os.path.basename(python)
+    virtualenv_basename = os.path.basename(base)
+    venv = os.path.join(venvs, python_basename, virtualenv_basename)
+    virtualenv_py = os.path.join(venv, 'bin', 'virtualenv')
+    if os.path.exists(virtualenv_py):
+        return virtualenv_py
+    if os.path.exists(venv):
+        shutil.rmtree(venv)
+    os.makedirs(venv)
+    subprocess.check_call([python, '-m', 'venv', venv])
+    pip = os.path.join(venv, 'bin', 'pip')
+    subprocess.check_call([pip, 'install', base])
+    return virtualenv_py
+
+
+def get_virtualenv_py(venvs, python, version):
+    virtualenv_info = virtualenv_infos[version]
+    path = download_virtualenv(virtualenv_info['url'])
+    if not verify_virtualenv(path, virtualenv_info['sha256']):
+        print(
+            f"The sha256 sum doesn't match for "
+            f"virtualenv-{version} at {path!r}.")
         sys.exit(3)
     base = unpack_virtualenv(path)
-    virtualenv_py = os.path.join(base, 'virtualenv.py')
-    if not os.path.exists(virtualenv_py):
-        print("The virtualenv.py script doesn't exist in %s" % base)
-        sys.exit(4)
+    return make_virtualenv_py(venvs, python, base)
+
+
+def run():
     bin_path = os.path.abspath('bin')
     if not os.path.isdir(bin_path):
         print("Creating directory %s" % bin_path)
         os.mkdir(bin_path)
-    make_scripts(bin_path, virtualenv_py)
+    venvs = os.path.abspath('venvs')
+    if not os.path.isdir(venvs):
+        print(f"Creating directory {venvs}")
+        os.mkdir(venvs)
+    make_scripts(bin_path, venvs)
 
 
 if __name__ == '__main__':
