@@ -46,10 +46,7 @@ python_virtualenv = {
     (3, 4): '16.7.9',
     (3, 5): '16.7.9',
     (3, 6): '16.7.9',
-    (3, 7): NEWEST_VIRTUALENV,
-    (3, 8): NEWEST_VIRTUALENV,
-    (3, 9): NEWEST_VIRTUALENV,
-    (3, 10): NEWEST_VIRTUALENV}
+    (3, 7): NEWEST_VIRTUALENV}
 
 
 def download_virtualenv(url):
@@ -119,7 +116,8 @@ def get_pythons(shims):
             print(json.dumps(list(sys.version_info)))""")
         python_version = tuple(json.loads(subprocess.check_output([
             shim[1], '-c', python_version_script]))[:2])
-        virtualenv_version = python_virtualenv[python_version]
+        virtualenv_version = python_virtualenv.get(
+            python_version, NEWEST_VIRTUALENV)
         virtualenv = "virtualenv-%s" % tuple(filter(None, match.groups()))
         pythons.append((python_version, virtualenv, virtualenv_version, shim[1]))
     return [x[1:] for x in sorted(pythons)]
