@@ -18,7 +18,7 @@ import tarfile
 import textwrap
 
 
-NEWEST_VIRTUALENV = '20.14.1'
+NEWEST_VIRTUALENV = '20.28.0'
 
 
 virtualenv_infos = {
@@ -30,14 +30,23 @@ virtualenv_infos = {
         sha256=(
             "0d62c70883c0342d59c11d0ddac0d954d0431321a41ab20851facf2b222598f3")
     ),
-    NEWEST_VIRTUALENV: dict(
+    '20.26.6': dict(
         url=(
-            "https://files.pythonhosted.org/packages/5f/6c/"
-            "d44c403a54ceb4ec5179d1a963c69887d30dc5b300529ce67c05b4f16212/"
-            "virtualenv-20.14.1.tar.gz"),
+            "https://files.pythonhosted.org/packages/3f/40/"
+            "abc5a766da6b0b2457f819feab8e9203cbeae29327bd241359f866a3da9d/"
+            "virtualenv-20.26.6.tar.gz"),
         use_venv=True,
         sha256=(
-            "ef589a79795589aada0c1c5b319486797c03b67ac3984c48c669c0e4f50df3a5")
+            "280aede09a2a5c317e409a00102e7077c6432c5a38f0ef938e643805a7ad2c48")
+    ),
+    NEWEST_VIRTUALENV: dict(
+        url=(
+            "https://files.pythonhosted.org/packages/bf/75/"
+            "53316a5a8050069228a2f6d11f32046cfa94fbb6cc3f08703f59b873de2e/"
+            "virtualenv-20.28.0.tar.gz"),
+        use_venv=True,
+        sha256=(
+            "2c9c3262bb8e7b87ea801d715fae4495e6032450c71d2309be9550e7364049aa")
     )}
 
 
@@ -46,7 +55,8 @@ python_virtualenv = {
     (3, 4): '16.7.9',
     (3, 5): '16.7.9',
     (3, 6): '16.7.9',
-    (3, 7): NEWEST_VIRTUALENV}
+    (3, 7): '20.26.6',
+    (3, 8): NEWEST_VIRTUALENV}
 
 
 def download_virtualenv(url):
